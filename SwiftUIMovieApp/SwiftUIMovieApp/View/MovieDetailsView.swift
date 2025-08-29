@@ -64,6 +64,7 @@ struct MovieDetailsView: View {
                 }
             }
         }
+        .background(Color(.secondarySystemBackground))
         .onAppear() {
             Task {
                 await viewModel.fetchDetailedMovie()
@@ -74,7 +75,10 @@ struct MovieDetailsView: View {
     
     var loadingView: some View {
         VStack {
+            Spacer()
+            
             ProgressView()
+                .frame(width: 80, height: 80)
             Text("Loading...")
                 .font(.caption)
             
@@ -147,12 +151,9 @@ struct MovieDetailsView: View {
             .padding(.bottom, 12.0)
             
             HStack {
-                var shortenedPlot = (viewModel.movie.plot ?? "").prefix(50) + "... read more"
-                Section(isOverviewExpanded ? "" : shortenedPlot, isExpanded: $isOverviewExpanded) {
-                    if isOverviewExpanded {
-                        Text(viewModel.movie.plot ?? "")
-                    }
-                }
+                var plot = viewModel.movie.plot ?? ""
+                let shortenedPlot = plot.prefix(50) + "... read more"
+                Text(isOverviewExpanded ? plot : String(shortenedPlot))
                 .onTapGesture {
                     self.isOverviewExpanded.toggle()
                 }

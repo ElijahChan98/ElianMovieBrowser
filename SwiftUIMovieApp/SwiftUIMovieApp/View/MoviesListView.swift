@@ -13,19 +13,43 @@ struct MoviesListView: View {
     @StateObject private var viewModel = MoviesListViewModel()
     
     @State var selectedMovie: Movie?
+    @State var showFilterList: Bool = false
     
     var body: some View {
-        Group {
-            if viewModel.isLoading {
-                loadingView
-            } else if !viewModel.movies.isEmpty {
-                moviesList
-            } else {
-                Text("No results found")
+        ZStack {
+            Group {
+                if viewModel.isLoading {
+                    loadingView
+                } else if !viewModel.movies.isEmpty {
+                    moviesList
+                } else {
+                    Text("No results found")
+                }
+            }
+            .navigationTitle("Search results for \(searchText)")
+            .toolbar {
+                Button("Filter") {
+                    showFilterList.toggle()
+                }
+                .anchorPreference(key: ButtonAnchorKey.self, value: .bounds) { $0 }
             }
         }
-        .navigationTitle("Search results for \(searchText)")
+        .overlayPreferenceValue(ButtonAnchorKey.self) { anchor in
+            GeometryReader { proxy in
+                if showFilterList, let anchor {
+                    let buttonFrame = proxy[anchor]
+                    
+                    filterListView
+                        .frame(alignment: .topLeading)
+                        .offset(
+                            x: buttonFrame.maxX - 150,
+                            y: buttonFrame.maxY - 30 // push it below the button
+                        )
+                }
+            }
+        }
         .task {
+            viewModel.setupPublishers()
             if let movies = self.movies {
                 viewModel.movies = movies
             } else {
@@ -33,6 +57,26 @@ struct MoviesListView: View {
                 await viewModel.fetchMovies(from: searchText)
             }
         }
+    }
+    
+    var filterListView: some View {
+        VStack {
+            ForEach(viewModel.filterTypes, id: \.self) { filterType in
+                VStack {
+                    FilterCell(filterText: filterType, isSelected: viewModel.currentFilterType == filterType)
+                        .onTapGesture {
+                            viewModel.currentFilterType = filterType
+                        }
+                    Divider()
+                        .padding(.leading, 8.0)
+                }
+            }
+        }
+        .background(.thinMaterial)
+        .shadow(radius: 8.0)
+        .cornerRadius(8.0)
+        .frame(width: 150)
+        .padding(.top, 40)
     }
     
     var moviesList: some View {
@@ -57,6 +101,14 @@ struct MoviesListView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemBackground))
+    }
+}
+
+struct ButtonAnchorKey: PreferenceKey {
+    static var defaultValue: Anchor<CGRect>? = nil
+    
+    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
+        value = nextValue() ?? value
     }
 }
 
@@ -105,6 +157,23 @@ struct MovieCell: View {
             }
             .buttonStyle(.borderless)
         }
+    }
+}
+
+struct FilterCell: View {
+    var filterText: String
+    var isSelected: Bool
+    
+    var body: some View {
+        HStack {
+            Text(filterText)
+            Spacer()
+            Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                .foregroundColor(isSelected ? .yellow : .gray)
+                .scaleEffect(isSelected ? 1.2 : 1.0)
+                .animation(.spring(), value: isSelected)
+        }
+        .padding(8.0)
     }
 }
 

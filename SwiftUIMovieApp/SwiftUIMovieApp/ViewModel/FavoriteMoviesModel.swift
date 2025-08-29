@@ -6,9 +6,33 @@
 //
 
 import Combine
+import SwiftUI
 
 class FavoriteMoviesModel: ObservableObject {
-    @Published var favoriteMovies: [Movie] = []
+    @AppStorage("storedFavoriteMovies") private var storedFavoriteMovies: Data = Data()
+    
+    @Published var favoriteMovies: [Movie] = [] {
+        didSet {
+            do {
+                storedFavoriteMovies = try JSONEncoder().encode(favoriteMovies)
+            } catch {
+                print("error encoding favorite movies")
+            }
+        }
+    }
+    
+    init() {
+        getAllStoredFavoriteMovies()
+    }
+    
+    private func getAllStoredFavoriteMovies() {
+        do {
+            favoriteMovies = try JSONDecoder().decode([Movie].self, from: storedFavoriteMovies)
+        }
+        catch {
+            print("error decoding favorite movies")
+        }
+    }
     
     func addMovie(_ movie: Movie) {
         if !favoriteMovies.contains(where: { $0.title == movie.title }) {

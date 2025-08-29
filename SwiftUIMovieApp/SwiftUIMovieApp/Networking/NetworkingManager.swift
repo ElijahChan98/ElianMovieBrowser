@@ -64,14 +64,22 @@ class NetworkManager: NetworkService {
         }
         
         return session.dataTaskPublisher(for: url)
-            .tryMap { data, response -> Data in
+            .tryMap { data, response -> T in
                 guard let httpResponse = response as? HTTPURLResponse,
                       200..<300 ~= httpResponse.statusCode else {
                     throw URLError(.badServerResponse)
                 }
-                return data
+                print(String(data: data, encoding: .utf8)!)
+                
+                let decoder = JSONDecoder()
+                do {
+                    let result = try decoder.decode(T.self, from: data)
+                    return result
+                } catch {
+                    print("Decoding failed:", error)
+                    throw error
+                }
             }
-            .decode(type: T.self, decoder: JSONDecoder())
             .receive(on: DispatchQueue.main)
             .eraseToAnyPublisher()
     }

@@ -13,33 +13,54 @@ struct HomePageView: View {
     
     @ObservedObject var viewModel: HomeViewModel = HomeViewModel()
     @State var isPresented: Bool = false
+    @State var isShowingDropdown: Bool = false
+    
+    @State var selectedMovie: Movie?
     
     var body: some View {
         NavigationStack(path: $path) {
-            VStack(spacing: 20.0) {
-                titleLabel
-                
-                HStack {
-                    Spacer()
-                    searchBar
-                    Spacer()
+            ZStack {
+                if isShowingDropdown {
+                    Color(.black).opacity(0.05)
+                        .ignoresSafeArea()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .onTapGesture {
+                            isShowingDropdown = false
+                        }
                 }
                 
-                HStack(spacing: 12) {
-                    searchButtonByName
-                    favoritesButton
+                VStack(spacing: 20.0) {
+                    titleLabel
+                    
+                    HStack {
+                        Spacer()
+                        SearchFieldWithDropdown(searchText: $viewModel.searchText, isShowingDropdown: $isShowingDropdown) { movie in
+                            self.selectedMovie = movie
+                        }
+                        Spacer()
+                    }
+                    
+                    HStack(spacing: 12) {
+                        if !isShowingDropdown {
+                            searchButtonByName
+                            favoritesButton
+                        }
+                    }
                 }
-            }
-            .navigationDestination(for: String.self) { route in
-                if route == "Search Results" {
-                    MoviesListView(searchText: viewModel.searchText)
-                }
-                else if route == "Favorites" {
-                    MoviesListView(movies: favoriteMoviesModel.favoriteMovies)
+                
+                .navigationDestination(for: String.self) { route in
+                    if route == "Search Results" {
+                        MoviesListView(searchText: viewModel.searchText)
+                    }
+                    else if route == "Favorites" {
+                        MoviesListView(movies: favoriteMoviesModel.favoriteMovies)
+                    }
                 }
             }
         }
-        
+        .sheet(item: $selectedMovie) { movie in
+            MovieDetailsView(viewModel: MovieDetailsViewModel(movie: movie))
+        }
     }
     
     var titleLabel: some View {
